@@ -19,3 +19,4 @@ TimescaleDB   Alert Engine
                     │
                     ▼
           Next.js Dashboard
+//Add AIOKafkaProducer.send()          

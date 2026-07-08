@@ -6,3 +6,6 @@ CITY_CENTER = {
     "lat": 12.9716,
     "lon": 77.5946,
 }
+KAFKA_BOOTSTRAP_SERVERS = "localhost:29092"
+
+KAFKA_TOPIC = "telemetry"

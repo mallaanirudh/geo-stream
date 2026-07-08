@@ -1,22 +1,32 @@
 import asyncio
 
-from device import Device
+from config import UPDATE_INTERVAL
+
+BATCH_SIZE = 500
 
 
 class TelemetryGenerator:
-    def __init__(self, devices):
+    def __init__(self, devices, producer):
         self.devices = devices
+        self.producer = producer
 
     async def start(self):
         while True:
-            telemetry = []
+            sent = 0
 
-            for device in self.devices:
-                telemetry.append(device.update())
+            for i in range(0, len(self.devices), BATCH_SIZE):
+                batch = self.devices[i:i + BATCH_SIZE]
 
-            for event in telemetry[:5]:
-                print(event.model_dump_json())
+                tasks = []
 
-            print(f"Generated {len(telemetry)} events")
+                for device in batch:
+                    telemetry = device.update()
+                    tasks.append(self.producer.publish(telemetry))
 
-            await asyncio.sleep(1)
+                await asyncio.gather(*tasks)
+
+                sent += len(batch)
+
+            print(f"Published {sent} events")
+
+            await asyncio.sleep(UPDATE_INTERVAL)

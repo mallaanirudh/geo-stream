@@ -1,5 +1,6 @@
 from datetime import datetime
-class Telemetry:
+from pydantic import BaseModel
+class Telemetry(BaseModel):
     device_id: int
     timestamp: datetime
     latitude: float

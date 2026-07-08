@@ -1,14 +1,16 @@
 import asyncio
 import random
 
-from config import NUMBER_OF_DEVICES, CITY_CENTER
+from config import *
 from device import Device
 from generator import TelemetryGenerator
+from kafka_producer import KafkaProducer
 
 
 devices = []
 
 for i in range(NUMBER_OF_DEVICES):
+
     lat = CITY_CENTER["lat"] + random.uniform(-0.02, 0.02)
     lon = CITY_CENTER["lon"] + random.uniform(-0.02, 0.02)
 
@@ -16,8 +18,24 @@ for i in range(NUMBER_OF_DEVICES):
 
 
 async def main():
-    generator = TelemetryGenerator(devices)
-    await generator.start()
+
+    producer = KafkaProducer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        topic=KAFKA_TOPIC,
+    )
+
+    await producer.start()
+
+    generator = TelemetryGenerator(
+        devices,
+        producer,
+    )
+
+    try:
+        await generator.start()
+
+    finally:
+        await producer.stop()
 
 
 if __name__ == "__main__":
