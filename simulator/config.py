@@ -1,0 +1,8 @@
+NUMBER_OF_DEVICES = 10000
+
+UPDATE_INTERVAL = 1
+
+CITY_CENTER = {
+    "lat": 12.9716,
+    "lon": 77.5946,
+}
