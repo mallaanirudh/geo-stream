@@ -1,5 +1,5 @@
 from aiokafka import AIOKafkaProducer
-from models import Telemetry
+from shared.models import Telemetry
 
 
 class KafkaProducer:

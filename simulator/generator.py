@@ -1,6 +1,6 @@
 import asyncio
 
-from config import UPDATE_INTERVAL
+from simulator.config import UPDATE_INTERVAL
 
 BATCH_SIZE = 500
 

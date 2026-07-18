@@ -1,7 +1,7 @@
 from datetime import datetime, UTC
 import random,math
 
-from models import Telemetry
+from shared.models import Telemetry
 
 
 class Device:

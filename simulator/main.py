@@ -1,10 +1,10 @@
 import asyncio
 import random
 
-from config import *
-from device import Device
-from generator import TelemetryGenerator
-from kafka_producer import KafkaProducer
+from simulator.config import *
+from simulator.device import Device
+from simulator.generator import TelemetryGenerator
+from simulator.kafka_producer import KafkaProducer
 
 
 devices = []
