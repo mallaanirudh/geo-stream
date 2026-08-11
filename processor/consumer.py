@@ -1,7 +1,7 @@
+import asyncio
 from aiokafka import AIOKafkaConsumer
 from shared.models import Telemetry
-from processor.db import insert_telemetry
-
+from processor.db import insert_telemetry_batch
 
 class KafkaConsumer:
     def __init__(
@@ -25,20 +25,33 @@ class KafkaConsumer:
         await self.consumer.stop()
 
     async def consume(self):
-        print("CONSUMER: waiting for messages...")
 
-        async for message in self.consumer:
-         print("CONSUMER: MESSAGE RECEIVED")
+     batch = []
 
-         telemetry = Telemetry.model_validate_json(message.value)
+     while True:
 
-         print("CONSUMER: parsed telemetry:", telemetry)
+        try:
+            message = await asyncio.wait_for(
+                self.consumer.getone(),
+                timeout=0.1
+            )
 
-         insert_telemetry(telemetry)
+            telemetry = Telemetry.model_validate_json(message.value)
 
-         print("CONSUMER: INSERTED INTO DB")
+            batch.append(telemetry)
 
-         yield telemetry
+            # Still allow downstream processing
+            yield telemetry
+
+            if len(batch) >= 100:
+                await insert_telemetry_batch(batch)
+                batch.clear()
+
+        except asyncio.TimeoutError:
+
+            if batch:
+                await insert_telemetry_batch(batch)
+                batch.clear()
         # async for message in self.consumer:
             # telemetry = Telemetry.model_validate_json(message.value)
 
