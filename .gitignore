@@ -1,2 +1,4 @@
 simulator/.venv/
-simulator/__pycache__/
+simulator/__pycache__/*
+/.env
+processor/__pycache__/*

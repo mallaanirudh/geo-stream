@@ -18,5 +18,4 @@ TimescaleDB   Alert Engine
             WebSocket Server
                     │
                     ▼
-          Next.js Dashboard
-//Add AIOKafkaProducer.send()          
+          Next.js Dashboard         

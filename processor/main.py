@@ -14,8 +14,10 @@ async def main():
     await consumer.start()
 
     try:
+        print("CONSUMER STARTED - waiting for messages...")
+
         async for telemetry in consumer.consume():
-            pass
+            print("RECEIVED:", telemetry)
 
     finally:
         await consumer.stop()

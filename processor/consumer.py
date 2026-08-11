@@ -1,5 +1,6 @@
 from aiokafka import AIOKafkaConsumer
 from shared.models import Telemetry
+from processor.db import insert_telemetry
 
 
 class KafkaConsumer:
@@ -24,9 +25,25 @@ class KafkaConsumer:
         await self.consumer.stop()
 
     async def consume(self):
+        print("CONSUMER: waiting for messages...")
+
         async for message in self.consumer:
-            telemetry = Telemetry.model_validate_json(message.value)
+         print("CONSUMER: MESSAGE RECEIVED")
 
-            print(telemetry)
+         telemetry = Telemetry.model_validate_json(message.value)
 
-            yield telemetry
+         print("CONSUMER: parsed telemetry:", telemetry)
+
+         insert_telemetry(telemetry)
+
+         print("CONSUMER: INSERTED INTO DB")
+
+         yield telemetry
+        # async for message in self.consumer:
+            # telemetry = Telemetry.model_validate_json(message.value)
+
+            # print(telemetry)
+
+            # insert_telemetry(telemetry)
+
+            # yield telemetry
