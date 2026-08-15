@@ -1,9 +1,19 @@
 import asyncio
+
 from aiokafka import AIOKafkaConsumer
+
 from shared.models import Telemetry
-from processor.db import insert_telemetry_batch
+from processor.alert_producer import AlertProducer
+from processor.db import (
+    insert_telemetry_batch,
+    insert_alert_batch,
+)
+
+from processor.alerts import AlertEngine
+
 
 class KafkaConsumer:
+
     def __init__(
         self,
         bootstrap_servers: str,
@@ -18,45 +28,91 @@ class KafkaConsumer:
             enable_auto_commit=True,
         )
 
+        self.alert_engine = AlertEngine(
+            max_temperature=30.0,
+            min_battery=99.0,
+            max_speed=35.0,
+        )
+        self.alert_producer = AlertProducer(
+           bootstrap_servers=bootstrap_servers
+        )
     async def start(self):
         await self.consumer.start()
+        await self.alert_producer.start()
 
     async def stop(self):
         await self.consumer.stop()
+        await self.alert_producer.stop()
 
     async def consume(self):
 
-     batch = []
+        telemetry_batch = []
+        alert_batch = []
 
-     while True:
+        while True:
 
-        try:
-            message = await asyncio.wait_for(
-                self.consumer.getone(),
-                timeout=0.1
-            )
+            try:
+                message = await asyncio.wait_for(
+                    self.consumer.getone(),
+                    timeout=0.1,
+                )
 
-            telemetry = Telemetry.model_validate_json(message.value)
+                # Convert Kafka message → Telemetry
+                telemetry = Telemetry.model_validate_json(
+                    message.value
+                )
+                alerts = self.alert_engine.check(telemetry)
 
-            batch.append(telemetry)
+                for alert in alerts:
+                    print(
+                        f"ALERT [{alert.alert_type}] "
+                        f"device={alert.device_id} "
+                        f"{alert.message}"
+                    )
+                    alert_batch.append(alert)
 
-            # Still allow downstream processing
-            yield telemetry
+                    await self.alert_producer.send(alert)
 
-            if len(batch) >= 100:
-                await insert_telemetry_batch(batch)
-                batch.clear()
+                alert_batch.extend(alerts)
 
-        except asyncio.TimeoutError:
+                telemetry_batch.append(telemetry)
 
-            if batch:
-                await insert_telemetry_batch(batch)
-                batch.clear()
-        # async for message in self.consumer:
-            # telemetry = Telemetry.model_validate_json(message.value)
+                # Allow downstream processing
+                yield telemetry
 
-            # print(telemetry)
 
-            # insert_telemetry(telemetry)
+                if len(telemetry_batch) >= 100:
 
-            # yield telemetry
+                    await insert_telemetry_batch(
+                        telemetry_batch
+                    )
+
+                    telemetry_batch.clear()
+
+                if len(alert_batch) >= 100:
+
+                    await insert_alert_batch(
+                        alert_batch
+                    )
+
+                    alert_batch.clear()
+
+            except asyncio.TimeoutError:
+
+                # Flush remaining telemetry
+                if telemetry_batch:
+
+                    await insert_telemetry_batch(
+                        telemetry_batch
+                    )
+
+                    telemetry_batch.clear()
+
+                # Flush remaining alerts
+                if alert_batch:
+
+                    await insert_alert_batch(
+                        alert_batch
+                    )
+
+                    alert_batch.clear()

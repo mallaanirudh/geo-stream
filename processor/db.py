@@ -1,8 +1,11 @@
 import os
+
 from psycopg_pool import AsyncConnectionPool
 from dotenv import load_dotenv
 
 from shared.models import Telemetry
+from processor.alerts import Alert
+
 
 load_dotenv()
 
@@ -30,8 +33,9 @@ async def stop_db():
     print("DATABASE: connection pool closed")
 
 
-async def insert_telemetry_batch(telemetries: list[Telemetry]):
-
+async def insert_telemetry_batch(
+    telemetries: list[Telemetry],
+):
     if not telemetries:
         return
 
@@ -67,3 +71,39 @@ async def insert_telemetry_batch(telemetries: list[Telemetry]):
             )
 
     print(f"DATABASE: inserted batch of {len(rows)}")
+
+
+async def insert_alert_batch(alerts: list[Alert]):
+    if not alerts:
+        return
+
+    rows = [
+        (
+            alert.device_id,
+            alert.alert_type,
+            alert.message,
+            alert.timestamp,
+            alert.latitude,
+            alert.longitude,
+        )
+        for alert in alerts
+    ]
+
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.executemany(
+                """
+                INSERT INTO alerts (
+                    device_id,
+                    alert_type,
+                    message,
+                    timestamp,
+                    latitude,
+                    longitude
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                rows,
+            )
+
+    print(f"DATABASE: inserted alert batch of {len(rows)}")
