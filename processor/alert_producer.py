@@ -10,6 +10,7 @@ class AlertProducer:
     def __init__(self, bootstrap_servers: str):
         self.producer = AIOKafkaProducer(
             bootstrap_servers=bootstrap_servers
+            
         )
 
     async def start(self):
